@@ -26,7 +26,8 @@ const RedisConfig = __importStar(require("./config/redis"));
 const ApiErrors = __importStar(require("./errors"));
 const AccountController = __importStar(require("./controllers/account"));
 const SessionsController = __importStar(require("./controllers/sessions"));
-let RedisStore = connect_redis_1.default(express_session_1.default);
+const SubscriptionsController = __importStar(require("./controllers/subscriptions"));
+exports.RedisStore = connect_redis_1.default(express_session_1.default);
 // Replace the deprecated mongoose promise with the es2015 version
 mongoose_1.default.Promise = Promise;
 mongoose_1.default.connect(config_1.config.db_connection);
@@ -36,7 +37,7 @@ exports.app = express_1.default();
 exports.app.use(helmet_1.default());
 exports.app.use(compression_1.default());
 exports.app.use(express_session_1.default({
-    store: new RedisStore({ client: RedisConfig.redisClient }),
+    store: new exports.RedisStore({ client: RedisConfig.redisClient }),
     name: 'user_session',
     secret: process.env.SESSION_SECRET || 'c308101f5823f2d4d02e10dd789005312906f451a1789c705e797751458397f0ef5e9e791bdca4624205970f189c1a86',
 }));
@@ -50,7 +51,10 @@ exports.app.use(express_1.default.static('static'));
  *-*-*-*-*/
 // User login/logout
 exports.app.get('/auth/exists/', AccountController.userExists);
-exports.app.post('/auth/login', AccountController.login);
+exports.app.post('/auth/login', [
+    check_1.check('email').isEmail(),
+    check_1.check('password').isLength({ min: 6 })
+], AccountController.login);
 exports.app.get('/auth/logout', AccountController.logout);
 exports.app.post('/auth/register', [
     check_1.check('email').isEmail(),
@@ -60,11 +64,13 @@ exports.app.post('/auth/register', [
 // Sessions
 exports.app.get('/auth/sessions', SessionsController.getSessions);
 exports.app.get('/auth/sessions/delete/:sessionId', SessionsController.deleteSession);
+// Subscriptions
+exports.app.get('/subscriptions/current', SubscriptionsController.getSubscriptions);
 // 404 route
 exports.app.use((req, res, next) => {
     res.json(ApiErrors.json(ApiErrors.ErrorType.MethodDoesNotExist));
 });
-// 500 Internal server error
+// 500 Internal server error route
 exports.app.use((err, req, res, next) => {
     if (err instanceof SyntaxError) {
         return res.status(400).json({

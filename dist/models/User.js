@@ -88,7 +88,6 @@ exports.UserSchema = new mongoose_1.default.Schema({
 exports.UserSchema.pre('save', function (next, res) {
     const user = this;
     if (user.isModified('password')) {
-        console.log("hashing");
         bcrypt_1.default.genSalt(config_1.config.salt_rounds).then((salt) => {
             bcrypt_1.default.hash(user.get('password'), salt).then((hashed) => {
                 user.set('password', hashed);

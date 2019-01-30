@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import passport from 'passport';
 import { Strategy } from 'passport-local';
 import { config } from '../config/config'
+import * as SubscriptionModels from './Subscription';
 
 export interface AttemptedLoginModel {
     userAgent: string,
@@ -26,13 +27,6 @@ export interface ApiKeysModel {
     ipWhiteList: string[]
 }
 
-export interface SubscriptionsModel {
-    subscriptionId: number,
-    createdOn: Date,
-    subscriptionExpires: boolean, 
-    expiryDate: Date
-}
-
 export interface StripeModel {
     stripeApiKey: string,
     hook: string,
@@ -47,6 +41,7 @@ export interface StripeModel {
  */
 export interface UserModel extends mongoose.Document {
     userId: number,
+    userPermissions: Number[],
     email: string,
     username: string,
     password: string,
@@ -56,13 +51,14 @@ export interface UserModel extends mongoose.Document {
     loginAttempts: AttemptedLoginModel[],
     currentSessions: CurrentSessionModel[],
     apiKeys: ApiKeysModel[],
-    subscriptions: SubscriptionsModel[],
+    subscriptions: SubscriptionModels.SubscriptionModel[],
     customerType: number,
     stripe: StripeModel
 }
 
 export const UserSchema = new mongoose.Schema<UserModel>({
     userId: Number,
+    userPermissions: [Number],
     email: {
         type: String,
         required: true,
@@ -137,7 +133,6 @@ UserSchema.pre('save', function(next, res) {
     const user = this;
 
     if (user.isModified('password')) { 
-        console.log("hashing");
         bcrypt.genSalt(config.salt_rounds).then((salt) => {
             bcrypt.hash(user.get('password'), salt).then((hashed) => {
                 user.set('password', hashed);

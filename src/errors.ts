@@ -14,9 +14,12 @@ export enum ErrorType {
     EmailNotSet,
     ApiKeyNotSet,
     LoginFailed,
+    CannotDeleteOwnSession,
+    SessionNotFound,
     // 401 Exists Errors
     EmailExists,
     UserExists,
+    UserLoggedIn,
     // 403 Errors
     AuthenticationRequired,
     ImproperPermissions,
@@ -72,11 +75,20 @@ export function json(error: ErrorType): object {
         case ErrorType.LoginFailed:
         return errorMessage('Email or password is incorrect');
 
+        case ErrorType.CannotDeleteOwnSession:
+        return errorMessage('You can not delete your currently active session, log out instead');
+
+        case ErrorType.SessionNotFound:
+        return errorMessage('Session not found');
+
         case ErrorType.EmailExists:
         return errorMessage('Email already exists');
 
         case ErrorType.UserExists:
         return errorMessage('User already exists');
+
+        case ErrorType.UserLoggedIn:
+        return errorMessage('User is already logged in');
 
         // 403s
         case ErrorType.AuthenticationRequired:

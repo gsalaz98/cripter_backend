@@ -16,9 +16,10 @@ import * as RedisConfig from './config/redis';
 import * as ApiErrors from './errors';
 import * as AccountController from './controllers/account';
 import * as SessionsController from './controllers/sessions';
+import * as SubscriptionsController from './controllers/subscriptions';
 import * as UserModel from './models/User';
 
-let RedisStore = redisStore(session);
+export let RedisStore = redisStore(session);
 
 // Replace the deprecated mongoose promise with the es2015 version
 mongoose.Promise = Promise;
@@ -32,7 +33,7 @@ export const app = express();
 app.use(helmet());
 app.use(compression());
 app.use(session({
-    store: new RedisStore({ client: RedisConfig.redisClient }),
+    store: new RedisStore({ client: RedisConfig.redisClient}),
     name: 'user_session',
     secret: process.env.SESSION_SECRET || 'c308101f5823f2d4d02e10dd789005312906f451a1789c705e797751458397f0ef5e9e791bdca4624205970f189c1a86',
 }));
@@ -48,8 +49,12 @@ app.use(express.static('static'));
 
 // User login/logout
 app.get('/auth/exists/', AccountController.userExists);
-app.post('/auth/login', AccountController.login);
+app.post('/auth/login', [
+    check('email').isEmail(),
+    check('password').isLength({ min: 6 })], AccountController.login);
+
 app.get('/auth/logout', AccountController.logout);
+
 app.post('/auth/register', [
    check('email').isEmail(),
    check('username').isAlphanumeric('en-US'),
@@ -59,12 +64,16 @@ app.post('/auth/register', [
 app.get('/auth/sessions', SessionsController.getSessions);
 app.get('/auth/sessions/delete/:sessionId', SessionsController.deleteSession);
 
+// Subscriptions
+
+app.get('/subscriptions/current', SubscriptionsController.getSubscriptions);
+
 // 404 route
 app.use((req, res, next) => {
     res.json(ApiErrors.json(ApiErrors.ErrorType.MethodDoesNotExist));
 });
 
-// 500 Internal server error
+// 500 Internal server error route
 app.use((err: any, req: any, res: any, next: any) => {
     if (err instanceof SyntaxError) {
         return res.status(400).json({

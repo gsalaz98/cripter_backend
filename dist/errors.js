@@ -17,14 +17,17 @@ var ErrorType;
     ErrorType[ErrorType["EmailNotSet"] = 6] = "EmailNotSet";
     ErrorType[ErrorType["ApiKeyNotSet"] = 7] = "ApiKeyNotSet";
     ErrorType[ErrorType["LoginFailed"] = 8] = "LoginFailed";
+    ErrorType[ErrorType["CannotDeleteOwnSession"] = 9] = "CannotDeleteOwnSession";
+    ErrorType[ErrorType["SessionNotFound"] = 10] = "SessionNotFound";
     // 401 Exists Errors
-    ErrorType[ErrorType["EmailExists"] = 9] = "EmailExists";
-    ErrorType[ErrorType["UserExists"] = 10] = "UserExists";
+    ErrorType[ErrorType["EmailExists"] = 11] = "EmailExists";
+    ErrorType[ErrorType["UserExists"] = 12] = "UserExists";
+    ErrorType[ErrorType["UserLoggedIn"] = 13] = "UserLoggedIn";
     // 403 Errors
-    ErrorType[ErrorType["AuthenticationRequired"] = 11] = "AuthenticationRequired";
-    ErrorType[ErrorType["ImproperPermissions"] = 12] = "ImproperPermissions";
+    ErrorType[ErrorType["AuthenticationRequired"] = 14] = "AuthenticationRequired";
+    ErrorType[ErrorType["ImproperPermissions"] = 15] = "ImproperPermissions";
     // 404s
-    ErrorType[ErrorType["MethodDoesNotExist"] = 13] = "MethodDoesNotExist";
+    ErrorType[ErrorType["MethodDoesNotExist"] = 16] = "MethodDoesNotExist";
 })(ErrorType = exports.ErrorType || (exports.ErrorType = {}));
 ;
 /**
@@ -64,10 +67,16 @@ function json(error) {
             return errorMessage('API key is not set');
         case ErrorType.LoginFailed:
             return errorMessage('Email or password is incorrect');
+        case ErrorType.CannotDeleteOwnSession:
+            return errorMessage('You can not delete your currently active session, log out instead');
+        case ErrorType.SessionNotFound:
+            return errorMessage('Session not found');
         case ErrorType.EmailExists:
             return errorMessage('Email already exists');
         case ErrorType.UserExists:
             return errorMessage('User already exists');
+        case ErrorType.UserLoggedIn:
+            return errorMessage('User is already logged in');
         // 403s
         case ErrorType.AuthenticationRequired:
             return errorMessage('You must be logged in to query this endpoint');

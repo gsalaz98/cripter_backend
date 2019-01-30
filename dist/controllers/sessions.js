@@ -1,4 +1,12 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importStar = (this && this.__importStar) || function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
@@ -23,10 +31,14 @@ exports.getSessions = (req, res, next) => {
     }
     UserModel.User.findById(req.user).then((doc) => {
         res.json({
-            'success': true,
-            'message': doc.toObject().currentSessions
+            success: true,
+            message: doc.toObject().currentSessions.map((item) => {
+                item.currentSession = item.sessionKey === `sess:${req.sessionID}`;
+                delete item.sessionKey;
+                return item;
+            })
         });
-    }).catch(console.log);
+    }).catch(next);
 };
 /**
  * API Endpoint `/auth/sessions/delete/:sessionId` Allows users to delete a currently active session.
@@ -36,37 +48,29 @@ exports.getSessions = (req, res, next) => {
  * @param res Express response
  * @param next Express next
  */
-exports.deleteSession = (req, res, next) => {
+exports.deleteSession = (req, res, next) => __awaiter(this, void 0, void 0, function* () {
     if (!req.user) {
         return res.status(403).json(ApiError.json(ApiError.ErrorType.AuthenticationRequired));
     }
-    UserModel.User.findById(req.user).then((doc) => {
-        for (let session of doc.currentSessions) {
-            if (req.params.sessionId == session._id) {
-                console.log("Found");
-                // Remove the session from mongodb, then from redis
-                // This is actually fast because the session value is cached
-                // in MongoDB and deletes are O(1) according to the official redis docs
-                let sessionKey = session.sessionKey;
-                const removeSession = session.remove();
-                const removeRedisSession = new Promise((resolve, reject) => {
-                    RedisConfig.redisClient.del(sessionKey, resolve);
+    UserModel.User.findOne({ _id: req.user }).then(userDoc => {
+        for (let session of userDoc.currentSessions) {
+            if (session._id == req.params.sessionId) {
+                if (session.sessionKey == `sess:${req.sessionID}`) {
+                    return res.status(401).json(ApiError.json(ApiError.ErrorType.CannotDeleteOwnSession));
+                }
+                UserModel.User.update({ _id: req.user }, { $pull: { currentSessions: { _id: req.params.sessionId } } }).then(delDoc => {
+                    if (!delDoc.nModified) {
+                        return res.status(401).json(ApiError.json(ApiError.ErrorType.SessionNotFound));
+                    }
+                    RedisConfig.redisClient.del(session.sessionKey, (err, response) => {
+                        res.json({
+                            success: true,
+                            message: 'Session has been deleted'
+                        });
+                    });
                 }).catch(next);
-                const removeStatus = Promise.all([removeSession, removeRedisSession]);
-                removeStatus.then((result) => {
-                    res.json({
-                        success: true,
-                        message: 'Deleted user session'
-                    });
-                }).catch(err => {
-                    console.log(err);
-                    res.json({
-                        success: false,
-                        message: 'Failed to delete user session'
-                    });
-                });
                 break;
             }
         }
     }).catch(next);
-};
+});
